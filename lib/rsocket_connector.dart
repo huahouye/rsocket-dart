@@ -14,7 +14,7 @@ class RSocketConnector {
   String _metadataMimeType = 'message/x.rsocket.composite-metadata.v0';
   ErrorConsumer? _errorConsumer;
   SocketAcceptor? _acceptor;
-  SocketClosedCallback? _socketClosedCallback;
+  CloseHandler? _onCloseCallback;
 
   RSocketConnector.create();
 
@@ -23,8 +23,8 @@ class RSocketConnector {
     return this;
   }
 
-  RSocketConnector setupClosedCallback(SocketClosedCallback socketClosedCallback) {
-    _socketClosedCallback = socketClosedCallback;
+  RSocketConnector onClose(CloseHandler onCloseCallback) {
+    _onCloseCallback = onCloseCallback;
     return this;
   }
 
@@ -59,7 +59,7 @@ class RSocketConnector {
       ..dataMimeType = _dataMimeType
       ..data = payload?.data
       ..metadata = payload?.metadata;
-    return connectRSocket(url, handler, _socketClosedCallback).then((conn) {
+    return connectRSocket(url, handler, _onCloseCallback).then((conn) {
       var rsocketRequester =
           RSocketRequester('requester', connectionSetupPayload, conn);
       if (_acceptor != null) {

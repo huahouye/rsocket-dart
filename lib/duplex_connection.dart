@@ -23,7 +23,6 @@ abstract class DuplexConnection implements Closeable, Availability {
 
 typedef TcpChunkHandler = void Function(Uint8List chunk);
 typedef CloseHandler = void Function();
-typedef SocketClosedCallback = void Function();
 
 class TcpDuplexConnection extends DuplexConnection {
   Socket socket;
@@ -60,16 +59,14 @@ class TcpDuplexConnection extends DuplexConnection {
 
 class WebSocketDuplexConnection extends DuplexConnection {
   WebSocketChannel webSocket;
-  bool closed = true;
-  SocketClosedCallback? socketClosedCallback;
+  bool closed = false;
+  CloseHandler? onCloseCallback;
 
-  WebSocketDuplexConnection(this.webSocket, {this.socketClosedCallback});
+  WebSocketDuplexConnection(this.webSocket, {this.onCloseCallback});
 
   @override
   void init() {
-
-
-      webSocket.stream.listen((message) {
+    webSocket.stream.listen((message) {
       var data = message as List<int>;
       var frameLenBytes = i24ToBytes(data.length);
       receiveHandler!(Uint8List.fromList(frameLenBytes + data));
@@ -86,7 +83,7 @@ class WebSocketDuplexConnection extends DuplexConnection {
       closed = true;
       _availability = 0.0;
       closeHandler?.call();
-      socketClosedCallback?.call();
+      onCloseCallback?.call();
     }
   }
 
@@ -97,19 +94,21 @@ class WebSocketDuplexConnection extends DuplexConnection {
   }
 }
 
-Future<DuplexConnection> connectRSocket(String url, TcpChunkHandler handler,SocketClosedCallback? socketClosedCallback) {
+Future<DuplexConnection> connectRSocket(
+    String url, TcpChunkHandler handler, CloseHandler? onCloseCallback) {
   var uri = Uri.parse(url);
   var scheme = uri.scheme;
   if (scheme == 'tcp') {
     var socketFuture = Socket.connect(uri.host, uri.port);
     return socketFuture.then((socket) => TcpDuplexConnection(socket));
-  }if (scheme == 'ws' || scheme == 'wss') {
+  }
+  if (scheme == 'ws' || scheme == 'wss') {
     final websocket = WebSocketChannel.connect(
       Uri.parse(url),
     );
-    return Future.value(WebSocketDuplexConnection(websocket, socketClosedCallback: socketClosedCallback));
+    return Future.value(
+        WebSocketDuplexConnection(websocket, onCloseCallback: onCloseCallback));
   } else {
     return Future.error('${scheme} unsupported');
   }
 }
-
