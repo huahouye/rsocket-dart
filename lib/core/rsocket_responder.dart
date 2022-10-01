@@ -7,6 +7,7 @@ import '../frame/frame_types.dart' as frame_types;
 import '../payload.dart';
 import '../rsocket.dart';
 
+// TODO this should be called ServerTransport, not Responder
 class BaseResponder {
   late SocketAcceptor socketAcceptor;
   late Uri uri;
